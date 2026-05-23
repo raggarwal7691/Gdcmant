@@ -1,0 +1,6 @@
+{
+  "name": "L.S.S.S.S. Government Degree College, Mant",
+  "description": "Official portal of L.S.S.S.S. Government Degree College, Mant, Mathura. UGC 12(B) recognised, affiliated to Dr. Bhimrao Ambedkar University, Agra.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

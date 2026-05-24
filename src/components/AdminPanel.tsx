@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Lock, Unlock, Mail, FileText, Check, Plus, Trash2, Calendar, FileSpreadsheet, Eye } from "lucide-react";
+import { 
+  clientAdminLogin, 
+  fetchAdmissions, 
+  updateAdmissionStatus, 
+  createNotice, 
+  deleteNotice, 
+  fetchEnquiries 
+} from "../localDb";
 
 interface AdminPanelProps {
   language: "en" | "hi";
@@ -22,25 +30,18 @@ export default function AdminPanel({ language, notices, onRefreshNotices }: Admi
   const [newNotice, setNewNotice] = useState({ title: "", content: "", category: "academic", isUrgent: false });
   const [noticeSuccess, setNoticeSuccess] = useState(false);
 
-  // Authenticate via proxy
+  // Authenticate locally matching static key requirement
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password })
-      });
-      const data = await res.json();
-      if (res.ok && data.token) {
-        setAuthToken(data.token);
-        // Save local session
-        localStorage.setItem("gdc_admin_token", data.token);
+      const res = await clientAdminLogin(password);
+      if (res.success && res.token) {
+        setAuthToken(res.token);
       } else {
-        setErrorMsg(data.error || "Incorrect password credential.");
+        setErrorMsg(res.error || "Incorrect password credential.");
       }
     } catch (err) {
       setErrorMsg("Network timeout during auth submission.");
@@ -57,27 +58,17 @@ export default function AdminPanel({ language, notices, onRefreshNotices }: Admi
     }
   }, []);
 
-  // Fetch protected data
+  // Fetch protected data resiliently
   useEffect(() => {
     if (!authToken) return;
 
     const fetchAdmissionsAndEnquiries = async () => {
       try {
-        const h = { Authorization: `Bearer ${authToken}` };
+        const admData = await fetchAdmissions(authToken);
+        setAdmissions(admData);
 
-        // 1. Admission records
-        const admRes = await fetch("/api/admissions", { headers: h });
-        if (admRes.ok) {
-          const admData = await admRes.json();
-          setAdmissions(admData);
-        }
-
-        // 2. Enquiries
-        const enqRes = await fetch("/api/enquiries", { headers: h });
-        if (enqRes.ok) {
-          const enqData = await enqRes.json();
-          setEnquiries(enqData);
-        }
+        const enqData = await fetchEnquiries(authToken);
+        setEnquiries(enqData);
       } catch (err) {
         console.error("Failed fetching admin resources", err);
       }
@@ -96,16 +87,8 @@ export default function AdminPanel({ language, notices, onRefreshNotices }: Admi
   const handleSetStatus = async (id: string, nextStatus: string) => {
     if (!authToken) return;
     try {
-      const res = await fetch(`/api/admissions/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ status: nextStatus })
-      });
-      if (res.ok) {
-        // Update local status safely
+      const res = await updateAdmissionStatus(id, nextStatus, authToken);
+      if (res.success) {
         setAdmissions(admissions.map(adm => adm.id === id ? { ...adm, status: nextStatus } : adm));
       }
     } catch (err) {
@@ -119,15 +102,8 @@ export default function AdminPanel({ language, notices, onRefreshNotices }: Admi
     if (!authToken || !newNotice.title) return;
 
     try {
-      const res = await fetch("/api/notices", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`
-        },
-        body: JSON.stringify(newNotice)
-      });
-      if (res.ok) {
+      const res = await createNotice(newNotice, authToken);
+      if (res.success) {
         setNoticeSuccess(true);
         setNewNotice({ title: "", content: "", category: "academic", isUrgent: false });
         onRefreshNotices();
@@ -144,11 +120,8 @@ export default function AdminPanel({ language, notices, onRefreshNotices }: Admi
     if (!confirm("Are you sure you want to delete this notice?")) return;
 
     try {
-      const res = await fetch(`/api/notices/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
-      if (res.ok) {
+      const res = await deleteNotice(id, authToken);
+      if (res.success) {
         onRefreshNotices();
       }
     } catch (err) {

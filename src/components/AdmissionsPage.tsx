@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Send, FileCheck, Info, ChevronDown } from "lucide-react";
+import { submitAdmission } from "../localDb";
 
 interface AdmissionsPageProps {
   language: "en" | "hi";
@@ -54,13 +55,12 @@ export default function AdmissionsPage({ language }: AdmissionsPageProps) {
     }
 
     try {
-      const response = await fetch("/api/admissions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+      const parsedMarks = parseFloat(formData.marksPercentage) || 0;
+      const res = await submitAdmission({
+        ...formData,
+        marksPercentage: parsedMarks
       });
-      const data = await response.json();
-      if (response.ok && data.success) {
+      if (res.success) {
         setSuccess(true);
         setFormData({
           studentName: "",
@@ -75,7 +75,7 @@ export default function AdmissionsPage({ language }: AdmissionsPageProps) {
           address: ""
         });
       } else {
-        setErrorMsg(data.error || "Submission failed");
+        setErrorMsg("Submission failed");
       }
     } catch (err) {
       setErrorMsg("Connection Timeout. Please check if your Dev Server is operating correctly.");

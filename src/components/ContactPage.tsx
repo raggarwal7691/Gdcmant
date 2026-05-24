@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Mail, Phone, MapPin, Send, HelpCircle, CheckCircle2 } from "lucide-react";
+import { submitEnquiry } from "../localDb";
 
 interface ContactPageProps {
   language: "en" | "hi";
@@ -35,13 +36,8 @@ export default function ContactPage({ language }: ContactPageProps) {
     }
 
     try {
-      const response = await fetch("/api/enquiries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
+      const res = await submitEnquiry(formData);
+      if (res.success) {
         setSuccess(true);
         setFormData({
           name: "",
@@ -51,7 +47,7 @@ export default function ContactPage({ language }: ContactPageProps) {
           message: ""
         });
       } else {
-        setErrorMsg(data.error || "Failed to deliver inquiry");
+        setErrorMsg("Failed to deliver inquiry");
       }
     } catch (err) {
       setErrorMsg("Host unreachable. Please check backend connection.");

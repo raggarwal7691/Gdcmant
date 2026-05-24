@@ -20,6 +20,13 @@ import StudentCornerPage from "./components/StudentCornerPage";
 import GalleryPage from "./components/GalleryPage";
 import ContactPage from "./components/ContactPage";
 import AdminPanel from "./components/AdminPanel";
+import { 
+  fetchNotices, 
+  fetchFacultyList, 
+  fetchIqacReportsList, 
+  fetchResearchResources, 
+  fetchGalleryList 
+} from "./localDb";
 
 export default function App() {
   const [language, setLanguage] = useState<"en" | "hi">("en");
@@ -34,41 +41,29 @@ export default function App() {
   const [projects, setProjects] = useState<any[]>([]);
   const [gallery, setGallery] = useState<any[]>([]);
 
-  // Fetch all initial data from express REST endpoints
+  // Fetch all initial data resiliently
   const loadDatabaseValues = async () => {
     try {
       // 1. Notices
-      const noticeRes = await fetch("/api/notices");
-      if (noticeRes.ok) {
-        const noticeData = await noticeRes.ok ? await noticeRes.json() : [];
-        setNotices(noticeData);
-      }
+      const noticeData = await fetchNotices();
+      setNotices(noticeData);
 
       // 2. Faculty
-      const facultyRes = await fetch("/api/faculty");
-      if (facultyRes.ok) {
-        setFaculty(await facultyRes.json());
-      }
+      const facultyData = await fetchFacultyList();
+      setFaculty(facultyData);
 
       // 3. IQAC Reports
-      const iqacRes = await fetch("/api/iqac");
-      if (iqacRes.ok) {
-        setIqacReports(await iqacRes.json());
-      }
+      const iqacData = await fetchIqacReportsList();
+      setIqacReports(iqacData);
 
       // 4. Research (Supervisors + Projects)
-      const researchRes = await fetch("/api/research");
-      if (researchRes.ok) {
-        const rcData = await researchRes.json();
-        setSupervisors(rcData.supervisors || []);
-        setProjects(rcData.projects || []);
-      }
+      const rcData = await fetchResearchResources();
+      setSupervisors(rcData.supervisors || []);
+      setProjects(rcData.projects || []);
 
       // 5. Gallery
-      const galRes = await fetch("/api/gallery");
-      if (galRes.ok) {
-        setGallery(await galRes.json());
-      }
+      const galData = await fetchGalleryList();
+      setGallery(galData);
 
     } catch (err) {
       console.error("Express backend seed read fallback", err);
